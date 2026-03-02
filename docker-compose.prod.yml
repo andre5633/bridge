@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: bridge_db_prod
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-bridge_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bridge_pass_123}
+      POSTGRES_DB: ${POSTGRES_DB:-bridge_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bridge_user} -d ${POSTGRES_DB:-bridge_db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bridge_api_prod
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-bridge_user}:${POSTGRES_PASSWORD:-bridge_pass_123}@db:5432/${POSTGRES_DB:-bridge_db}
+      - SECRET_KEY=${SECRET_KEY}
+      - ENVIRONMENT=production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=${URL_API_PROD:-http://localhost:8000/api/v1}
+    container_name: bridge_frontend_prod
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: always
+
+volumes:
+  postgres_data_prod:

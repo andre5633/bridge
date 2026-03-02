@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: bridge_db_container
+    environment:
+      POSTGRES_USER: bridge_user
+      POSTGRES_PASSWORD: bridge_pass_123
+      POSTGRES_DB: bridge_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bridge_api_container
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - ENVIRONMENT=development
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  postgres_data:

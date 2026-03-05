@@ -63,6 +63,10 @@ export const MovementFormModal: React.FC<FormProps> = ({
         });
       } else {
         // Create new (handle installments)
+        const instCount = parseInt(installments) || 1;
+        const totalVal = val;
+        const baseInstallmentValue = Math.round((totalVal / instCount) * 100) / 100;
+
         for (let i = 0; i < instCount; i++) {
           const currentLabel = instCount > 1 ? ` (${i + 1}/${instCount})` : '';
           const [y, m, d_] = date.split('-').map(Number);
@@ -71,9 +75,13 @@ export const MovementFormModal: React.FC<FormProps> = ({
           const installmentDate = baseDate.toISOString().split('T')[0];
           const instStatus = i === 0 ? status : TransactionStatus.PENDING;
 
+          const finalAmount = (i === instCount - 1)
+            ? Math.round((totalVal - (baseInstallmentValue * (instCount - 1))) * 100) / 100
+            : baseInstallmentValue;
+
           await TransactionService.create({
             description: `${desc}${currentLabel}`,
-            amount: val,
+            amount: finalAmount,
             date: installmentDate,
             status: instStatus,
             paymentDate: instStatus === TransactionStatus.PAID ? installmentDate : undefined,
